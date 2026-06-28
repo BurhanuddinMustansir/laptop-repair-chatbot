@@ -40,6 +40,8 @@ def verify_webhook(request: Request):
 async def receive_webhook(request: Request):
     body = await request.json()
 
+    print("INCOMING WEBHOOK PAYLOAD:", json.dumps(body, indent=2))
+
     if body.get("object") != "whatsapp_business_account":
         return {"status": "ignored"}
     
@@ -55,8 +57,12 @@ async def receive_webhook(request: Request):
                     text_object = message.get("text", {})
                     text = text_object.get("body")
 
-                    reply = get_bot_response(text)
-                    await send_whatsapp_message(sender, reply)
+                    try:
+                        reply = get_bot_response(text)
+                        print(f"Bot response generated: {reply}")
+                        await send_whatsapp_message(sender, reply)
+                    except Exception as e:
+                        print(f"Error executing bot or sending message: {e}")
 
     return {"status": "ok"}
 
@@ -72,14 +78,17 @@ async def send_whatsapp_message(to: str, text:str):
 
     payload = {
         "messaging_product": "whatsapp",
-        "recipient_type": "indivisual",
+        "recipient_type": "individual",
         "to": to,
         "type": "text",
         "text": {"body": text}
     }
 
     async with httpx.AsyncClient() as client:
-        await client.post(url, headers=headers, json=payload)
+        response = await client.post(url, headers=headers, json=payload)
+        # CRITICAL DEBUG LINE: Check Meta's delivery server status output
+        print(f"Meta Response Status: {response.status_code}")
+        print(f"Meta Response Body: {response.text}")
 
 
 
