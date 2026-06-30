@@ -2,3 +2,6 @@
 __pycache__/
 venv/
 orders.csv
+servive_account_credentials.json
+sheets_api_test.py
+desktop_client_burhan_credentials.json

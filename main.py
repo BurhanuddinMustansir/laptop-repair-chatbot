@@ -103,3 +103,9 @@ def web_chat(req: ChatRequest):
     reply = get_bot_response(req.message)
     return ChatResponse(reply=reply)
 
+
+@app.post("/update")
+async def recieve_update(request: Request):
+    body = await request.json()
+    
+    print(f"INCOMING UPDATE REQUEST: {json.dumps(body, indent=2)}")
