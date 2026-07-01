@@ -3,6 +3,11 @@ import os
 from datetime import datetime
 from pathlib import Path 
 
+from google.oauth2 import service_account
+from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
+from datetime import datetime
+
 from dotenv import load_dotenv
 from langchain.tools import tool
 from langchain_openai import ChatOpenAI
@@ -30,22 +35,65 @@ def lookup_services(query: str) -> str:
 @tool 
 def create_repair_order(customer_name: str, device: str, issue_description: str, contact_number: str) -> str:
     """Create a new repair order, Use this tool ONLY when you have collected ALL four pieces of information from 
-    the customer: their name, device model, issue description, and contact phone number"""
+    the customer: their name, device model, issue description, and contact phone number
+    
+    Returns:
+        A success message with the Order ID, or an error message.
+        
+    Error Handling Instructions for the Agent:
+        If this tool returns an error or indicates the API is down, 
+        apologize sincerely to the user, inform them that orders cannot 
+        be processed automatically right now, and let them know you are 
+        escalating their query to a manual human operator. Do not retry 
+        the tool immediately.
+    """
 
-    #generate a unique order id using the current timestamp
-    order_id = f"ORD-{datetime.now().strftime("%Y%m%d%H%M%S")}"
+    credentials_info = {
+        "type": "service_account",
+        "project_id": os.getenv("GCP_PROJECT_ID"),
+        "private_key_id": os.getenv("GCP_PRIVATE_KEy_ID"),
+        # fixing potential newline formatting issues
+        "private_key": os.getenv("GCP_PRIVATE_KEY").replace('\\n', '\n'),
+        "client_email": os.getenv("GCP_CLIENT_EMAIL"),
+        "client_id": os.getenv("GCP_CLIENT_ID"),
+        "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+        "token_uri": "https://oauth2.googleapis.com/token",
+        "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+        "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/laptop-repair-server%40laptop-repair-2008.iam.gserviceaccount.com",
+        "universe_domain": "googleapis.com"
+    }
 
-    #append the order to the CSV file, creating headers if the file is new
+    SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
 
-    file_exists = ORDERS_CSV_PATH.exists()
+    creds = service_account.Credentials.from_service_account_info(credentials_info, scopes=SCOPES)
+    SPREADSHEET_ID = os.getenv("SPREADSHEET_ID")
+    order_id = f"Order-ID-{datetime.now().strftime("%Y%M%d%H%M%S")}"
+    try:
+        service = build("sheets", "v4", credentials=creds)
 
-    with open(ORDERS_CSV_PATH, "a", newline="", encoding="utf-8") as f:
-        writer = csv.writer(f)
-        if not file_exists:
-            writer.writerow(["order_id", "customer_name", "device", "issue_description", "contact_number", "created_at", "status"])
-        writer.writerow([order_id, customer_name, device, issue_description, contact_number, datetime.now().isoformat(), "pending"])
+        values = [
+            [customer_name, contact_number, device, f"{datetime.now().strftime("%d-%M-%Y %H:%M")}", "Pending", issue_description, order_id]
+        ]
 
-        return f"order created successfully! Order ID: {order_id}. We will contact {customer_name} at {contact_number} with a quote shortly"
+        body = {"values": values}
+        result = (
+            service.spreadsheets()
+            .values()
+            .append(
+                spreadsheetId=SPREADSHEET_ID,
+                range='A1',
+                valueInputOption="USER_ENTERED",
+                body=body,
+                insertDataOption="INSERT_ROWS"
+            )
+            .execute()
+        )
+        rows = f"{(result.get('updates').get('updatedCells'))} cells appended."
+        print(rows)
+        return f"Success: Order Created with order ID = {order_id} "
+
+    except HttpError as error:
+        return {"error: ", error}
     
 SYSTEM_PROMPT = """You are the friendly customer support assistant for TechFix 
 Laptop Repair shop.
