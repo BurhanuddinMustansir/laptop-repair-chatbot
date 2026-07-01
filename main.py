@@ -109,3 +109,15 @@ async def recieve_update(request: Request):
     body = await request.json()
     
     print(f"INCOMING UPDATE REQUEST: {json.dumps(body, indent=2)}")
+
+    phone = body.get("phone_number")
+    name = body.get("customer_name")
+    # repair_order = body.get("repair_order")
+
+    message = f"{name} Your Repair order with the Order ID: 549583982995 has been confirmed"
+    try: 
+        await send_whatsapp_message(phone, message)
+    except Exception as e:
+        print(f"Error sending whatsapp message: {e}")
+
+    return {"status": "ok"}
