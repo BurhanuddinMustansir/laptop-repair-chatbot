@@ -67,12 +67,12 @@ def create_repair_order(customer_name: str, device: str, issue_description: str,
 
     creds = service_account.Credentials.from_service_account_info(credentials_info, scopes=SCOPES)
     SPREADSHEET_ID = os.getenv("SPREADSHEET_ID")
-    order_id = f"Order-ID-{datetime.now().strftime("%Y%M%d%H%M%S")}"
+    order_id = f"Order-ID-{datetime.now().strftime("%Y%m%d%H%M")}"
     try:
         service = build("sheets", "v4", credentials=creds)
 
         values = [
-            [customer_name, contact_number, device, f"{datetime.now().strftime("%d-%M-%Y %H:%M")}", "Pending", issue_description, order_id]
+            [customer_name, contact_number, device, f"{datetime.now().strftime("%Y-%m-%d %H:%M")}", "Pending", issue_description, order_id]
         ]
 
         body = {"values": values}
