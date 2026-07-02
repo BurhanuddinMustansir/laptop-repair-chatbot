@@ -7,6 +7,7 @@ from fastapi import FastAPI, Request, Response
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
+import redis
 
 from agent import get_bot_response
 
@@ -18,6 +19,8 @@ app = FastAPI(title="TechFix WhatsApp Bot")
 WHATSAPP_ACCESS_TOKEN = os.getenv("WHATSAPP_ACCESS_TOKEN")
 WHATSAPP_PHONE_NUMBER_ID = os.getenv("WHATSAPP_PHONE_NUMBER_ID")
 VERIFY_TOKEN = os.getenv("VERIFY_TOKEN")
+
+redis_client = redis.from_url(os.getenv("REDIS_URL"), decode_responses=True)
 
 @app.get("/health")
 def health():
@@ -56,11 +59,29 @@ async def receive_webhook(request: Request):
                     sender = message.get("from")
                     text_object = message.get("text", {})
                     text = text_object.get("body")
-
+                    # generating session id for cach in database
+                    session_id = f"session:{sender}"
+                    message = {
+                        "role": "user",
+                        "content": text
+                    }
+                    #storing user message
+                    redis_client.rpush(session_id, json.dumps(message))
+                    context = [
+                        json.loads(m) for m in redis_client.lrange(session_id, -10, -1)
+                    ]
+                    #setting expiry at one hour
+                    redis_client.expire(session_id, 3600)
                     try:
-                        reply = get_bot_response(text)
+                        reply = get_bot_response(context)
                         print(f"Bot response generated: {reply}")
                         await send_whatsapp_message(sender, reply)
+                        message = {
+                            "role": "assistant",
+                            "content": reply
+                        }
+                        redis_client.rpush(session_id, json.dumps(message))
+                        redis_client.expire(session_id, 3600)
                     except Exception as e:
                         print(f"Error executing bot or sending message: {e}")
 
