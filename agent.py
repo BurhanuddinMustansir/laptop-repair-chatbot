@@ -37,7 +37,7 @@ def lookup_services(query: str) -> str:
     return knowledge
 
 @tool 
-def create_repair_order(customer_name: str, device: str, issue_description: str, contact_number: Annotated[str, InjectedToolArg], config: RunnableConfig) -> str:
+def create_repair_order(customer_name: str, device: str, issue_description: str, contact_number: Annotated[str, InjectedToolArg]="", config: RunnableConfig = None) -> str:
     """Create a new repair order. Use this tool ONLY when you have collected ALL THREE pieces of information from 
     the customer: their name, device model, and issue description. Do NOT ask for their contact phone number, as it is handled automatically.
     
@@ -51,6 +51,9 @@ def create_repair_order(customer_name: str, device: str, issue_description: str,
         escalating their query to a manual human operator. Do not retry 
         the tool immediately.
     """
+
+    print(f"\n🔹 Argument injected by LangChain:")
+    print(f"   - contact_number:  {contact_number}")
 
     credentials_info = {
         "type": "service_account",
