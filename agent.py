@@ -36,73 +36,77 @@ def lookup_services(query: str) -> str:
     knowledge = load_knowledge_base()
     return knowledge
 
-@tool 
-def create_repair_order(customer_name: str, device: str, issue_description: str, contact_number: str = "") -> str:
-    """Create a new repair order. Use this tool ONLY when you have collected ALL THREE pieces of information from 
-    the customer: their name, device model, and issue description. Do NOT ask for their contact phone number, as it is handled automatically.
-    
-    Returns:
-        A success message with the Order ID, or an error message.
+def build_repair_order_tool(phone_number: str):
+
+    @tool 
+    def create_repair_order(customer_name: str, device: str, issue_description: str, contact_number: str = phone_number) -> str:
+        """Create a new repair order. Use this tool ONLY when you have collected ALL THREE pieces of information from 
+        the customer: their name, device model, and issue description. Do NOT ask for their contact phone number, as it is handled automatically.
         
-    Error Handling Instructions for the Agent:
-        If this tool returns an error or indicates the API is down, 
-        apologize sincerely to the user, inform them that orders cannot 
-        be processed automatically right now, and let them know you are 
-        escalating their query to a manual human operator. Do not retry 
-        the tool immediately.
-    """
-    print(f"🤖 LEGACY BULLETPROOF DEBUG: Phone number is {contact_number}")
-    
-    if not contact_number:
-        return "Error: Phone number failed to pass through the executor chain."
+        Returns:
+            A success message with the Order ID, or an error message.
+            
+        Error Handling Instructions for the Agent:
+            If this tool returns an error or indicates the API is down, 
+            apologize sincerely to the user, inform them that orders cannot 
+            be processed automatically right now, and let them know you are 
+            escalating their query to a manual human operator. Do not retry 
+            the tool immediately.
+        """
+        print(f"🤖 LEGACY BULLETPROOF DEBUG: Phone number is {contact_number}")
+        
+        if not contact_number:
+            return "Error: Phone number failed to pass through the executor chain."
 
 
-    credentials_info = {
-        "type": "service_account",
-        "project_id": os.getenv("GCP_PROJECT_ID"),
-        "private_key_id": os.getenv("GCP_PRIVATE_KEy_ID"),
-        # fixing potential newline formatting issues
-        "private_key": os.getenv("GCP_PRIVATE_KEY").replace('\\n', '\n'),
-        "client_email": os.getenv("GCP_CLIENT_EMAIL"),
-        "client_id": os.getenv("GCP_CLIENT_ID"),
-        "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-        "token_uri": "https://oauth2.googleapis.com/token",
-        "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-        "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/laptop-repair-server%40laptop-repair-2008.iam.gserviceaccount.com",
-        "universe_domain": "googleapis.com"
-    }
+        credentials_info = {
+            "type": "service_account",
+            "project_id": os.getenv("GCP_PROJECT_ID"),
+            "private_key_id": os.getenv("GCP_PRIVATE_KEy_ID"),
+            # fixing potential newline formatting issues
+            "private_key": os.getenv("GCP_PRIVATE_KEY").replace('\\n', '\n'),
+            "client_email": os.getenv("GCP_CLIENT_EMAIL"),
+            "client_id": os.getenv("GCP_CLIENT_ID"),
+            "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+            "token_uri": "https://oauth2.googleapis.com/token",
+            "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+            "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/laptop-repair-server%40laptop-repair-2008.iam.gserviceaccount.com",
+            "universe_domain": "googleapis.com"
+        }
 
-    SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
+        SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
 
-    creds = service_account.Credentials.from_service_account_info(credentials_info, scopes=SCOPES)
-    SPREADSHEET_ID = os.getenv("SPREADSHEET_ID")
-    order_id = f"Order-ID-{datetime.now().strftime("%Y%m%d%H%M")}"
-    try:
-        service = build("sheets", "v4", credentials=creds)
+        creds = service_account.Credentials.from_service_account_info(credentials_info, scopes=SCOPES)
+        SPREADSHEET_ID = os.getenv("SPREADSHEET_ID")
+        order_id = f"Order-ID-{datetime.now().strftime("%Y%m%d%H%M")}"
+        try:
+            service = build("sheets", "v4", credentials=creds)
 
-        values = [
-            [customer_name, contact_number, device, f"{datetime.now().strftime("%Y-%m-%d %H:%M")}", "Pending", issue_description, order_id]
-        ]
+            values = [
+                [customer_name, contact_number, device, f"{datetime.now().strftime("%Y-%m-%d %H:%M")}", "Pending", issue_description, order_id]
+            ]
 
-        body = {"values": values}
-        result = (
-            service.spreadsheets()
-            .values()
-            .append(
-                spreadsheetId=SPREADSHEET_ID,
-                range='A1',
-                valueInputOption="USER_ENTERED",
-                body=body,
-                insertDataOption="INSERT_ROWS"
+            body = {"values": values}
+            result = (
+                service.spreadsheets()
+                .values()
+                .append(
+                    spreadsheetId=SPREADSHEET_ID,
+                    range='A1',
+                    valueInputOption="USER_ENTERED",
+                    body=body,
+                    insertDataOption="INSERT_ROWS"
+                )
+                .execute()
             )
-            .execute()
-        )
-        rows = f"{(result.get('updates').get('updatedCells'))} cells appended."
-        print(rows)
-        return f"Success: Order Created with order ID = {order_id} "
+            rows = f"{(result.get('updates').get('updatedCells'))} cells appended."
+            print(rows)
+            return f"Success: Order Created with order ID = {order_id} "
 
-    except HttpError as error:
-        return {"error: ", error}
+        except HttpError as error:
+            return {"error: ", error}
+        
+    return create_repair_order
     
 SYSTEM_PROMPT = """You are the friendly customer support assistant for TechFix 
 Laptop Repair shop.
@@ -124,9 +128,9 @@ CRITICAL RULES FOR TOOL CALLING:
 
 Keep responses concise and friendly. Use emojis sparingly. Always be helpful."""
 
-def build_agent() -> AgentExecutor:
+def build_agent(tools) -> AgentExecutor:
     llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.3)
-    tools = [lookup_services, create_repair_order]
+    
     
     prompt = ChatPromptTemplate.from_messages([
         ("system", SYSTEM_PROMPT), 
@@ -138,14 +142,17 @@ def build_agent() -> AgentExecutor:
     agent = create_tool_calling_agent(llm, tools, prompt)
     return AgentExecutor(agent=agent, tools=tools, verbose=False)
 
-agent_executor = build_agent()
+
 
 def get_bot_response(user_message: str, user_phone: str, chat_history: list) -> str:
+    create_repair_order = build_repair_order_tool(phone_number=user_phone)
+    tools = [lookup_services, create_repair_order]
+    agent_executor = build_agent(tools)
+
     result = agent_executor.invoke(
         {
             "input": user_message,
             "chat_history": chat_history,
-            "contact_number": user_phone 
         }
     )
     return result["output"]
