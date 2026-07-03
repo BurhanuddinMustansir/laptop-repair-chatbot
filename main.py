@@ -61,19 +61,22 @@ async def receive_webhook(request: Request):
                     text = text_object.get("body")
                     # generating session id for cach in database
                     session_id = f"session:{sender}"
+                    
+                    
+                    context = [
+                        json.loads(m) for m in redis_client.lrange(session_id, -10, -1)
+                    ]
+                    #storing user message
                     message = {
                         "role": "user",
                         "content": text
                     }
-                    #storing user message
                     redis_client.rpush(session_id, json.dumps(message))
-                    context = [
-                        json.loads(m) for m in redis_client.lrange(session_id, -10, -1)
-                    ]
+                    
                     #setting expiry at one hour
                     redis_client.expire(session_id, 3600)
                     try:
-                        reply = get_bot_response(context)
+                        reply = get_bot_response(text, sender, context)
                         print(f"Bot response generated: {reply}")
                         await send_whatsapp_message(sender, reply)
                         message = {

@@ -13,6 +13,10 @@ from langchain.tools import tool
 from langchain_openai import ChatOpenAI
 from langchain_classic.agents import AgentExecutor, create_tool_calling_agent
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from typing import Annotated
+from langchain_core.tools.base import InjectedToolArg
+from langchain_core.runnables import RunnableConfig
+
 
 load_dotenv()
 
@@ -33,9 +37,9 @@ def lookup_services(query: str) -> str:
     return knowledge
 
 @tool 
-def create_repair_order(customer_name: str, device: str, issue_description: str, contact_number: str) -> str:
-    """Create a new repair order, Use this tool ONLY when you have collected ALL four pieces of information from 
-    the customer: their name, device model, issue description, and contact phone number
+def create_repair_order(customer_name: str, device: str, issue_description: str, contact_number: Annotated[str, InjectedToolArg], config: RunnableConfig) -> str:
+    """Create a new repair order. Use this tool ONLY when you have collected ALL THREE pieces of information from 
+    the customer: their name, device model, and issue description. Do NOT ask for their contact phone number, as it is handled automatically.
     
     Returns:
         A success message with the Order ID, or an error message.
@@ -123,7 +127,8 @@ def build_agent() -> AgentExecutor:
     prompt = ChatPromptTemplate.from_messages([
         ("system", SYSTEM_PROMPT), 
         MessagesPlaceholder(variable_name="chat_history", optional=True),
-        ("human", "{input}"), MessagesPlaceholder(variable_name="agent_scratchpad")
+        ("human", "{input}"), 
+        MessagesPlaceholder(variable_name="agent_scratchpad")
     ])
 
     agent = create_tool_calling_agent(llm, tools, prompt)
@@ -131,6 +136,17 @@ def build_agent() -> AgentExecutor:
 
 agent_executor = build_agent()
 
-def get_bot_response(user_message: str) -> str:
-    result = agent_executor.invoke({"input": user_message})
+def get_bot_response(user_message: str, user_phone: str, chat_history: list) -> str:
+    result = agent_executor.invoke(
+        {
+            "input": user_message,
+            "chat_history": chat_history,
+        },
+        config={
+            "configurable": {
+                # This key name MUST match the variable name in the tool create_repair_order
+                "contact_number": user_phone
+            }
+        }
+    )
     return result["output"]
