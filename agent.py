@@ -16,7 +16,7 @@ from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from typing import Annotated
 from langchain_core.tools.base import InjectedToolArg
 from langchain_core.runnables import RunnableConfig
-
+from zoneinfo import ZoneInfo
 
 load_dotenv()
 
@@ -78,12 +78,12 @@ def build_repair_order_tool(phone_number: str):
 
         creds = service_account.Credentials.from_service_account_info(credentials_info, scopes=SCOPES)
         SPREADSHEET_ID = os.getenv("SPREADSHEET_ID")
-        order_id = f"Order-ID-{datetime.now().strftime("%Y%m%d%H%M")}"
+        order_id = f"Order-ID-{datetime.now(ZoneInfo("Asia/Karachi")).strftime("%Y%m%d%H%M")}"
         try:
             service = build("sheets", "v4", credentials=creds)
 
             values = [
-                [customer_name, contact_number, device, f"{datetime.now().strftime("%Y-%m-%d %H:%M")}", "Pending", issue_description, order_id]
+                [customer_name, contact_number, device, f"{datetime.now(ZoneInfo("Asia/Karachi")).strftime("%Y-%m-%d %H:%M")}", "Pending", issue_description, order_id]
             ]
 
             body = {"values": values}
