@@ -37,7 +37,7 @@ def lookup_services(query: str) -> str:
     return knowledge
 
 @tool 
-def create_repair_order(customer_name: str, device: str, issue_description: str, config: RunnableConfig = None) -> str:
+def create_repair_order(customer_name: str, device: str, issue_description: str, contact_number: str = "") -> str:
     """Create a new repair order. Use this tool ONLY when you have collected ALL THREE pieces of information from 
     the customer: their name, device model, and issue description. Do NOT ask for their contact phone number, as it is handled automatically.
     
@@ -51,14 +51,10 @@ def create_repair_order(customer_name: str, device: str, issue_description: str,
         escalating their query to a manual human operator. Do not retry 
         the tool immediately.
     """
-    contact_number = ""
-    if config and "configurable" in config:
-        contact_number = config["configurable"].get("contact_number", "")
-        
-    print(f"🤖 MANUAL INJECTION DEBUG: Extracted phone is {contact_number}")
+    print(f"🤖 LEGACY BULLETPROOF DEBUG: Phone number is {contact_number}")
     
     if not contact_number:
-        return "Error: Internal mapping exception, phone number missing."
+        return "Error: Phone number failed to pass through the executor chain."
 
 
     credentials_info = {
@@ -149,12 +145,7 @@ def get_bot_response(user_message: str, user_phone: str, chat_history: list) -> 
         {
             "input": user_message,
             "chat_history": chat_history,
-        },
-        config={
-            "configurable": {
-                # This key name MUST match the variable name in the tool create_repair_order
-                "contact_number": user_phone
-            }
+            "contact_number": user_phone 
         }
     )
     return result["output"]
