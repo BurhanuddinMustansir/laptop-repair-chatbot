@@ -7,6 +7,6 @@ httpx==0.28.1
 langchain-classic==1.0.8
 google-api-python-client==2.198.0
 google-auth==2.55.1
-redis==8.0.1
+redis==7.4.1
 redisvl==0.22.0
 openai==2.44.0
