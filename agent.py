@@ -122,6 +122,7 @@ def get_booked_slots(date):
         return booked_slots
 
     except Exception as e:
+        print(f"error in get_booked_slots {e}")
         return f"error: {e}"
 
 
@@ -150,8 +151,8 @@ def build_repair_order_tool(phone_number: str):
 
         
         appointment_id = f"{datetime.now(ZoneInfo("Asia/Karachi")).strftime("%Y%m%d%H%M")}"
-        appointment_date = datetime.strptime(appointment_date, "%Y-%m-%d")
-        appointment_time = datetime.strptime(appointment_time, "%H:%M")
+        appointment_date = datetime.strptime(appointment_date, "%Y-%m-%d").strftime("%Y-%m-%d")
+        appointment_time = datetime.strptime(appointment_time, "%H:%M").strftime("%H:%M")
         created_at = datetime.now(ZoneInfo("Asia/Karachi")).strftime("%Y-%m-%d %H:%M")
         try:
             service = build("sheets", "v4", credentials=creds)
@@ -178,6 +179,7 @@ def build_repair_order_tool(phone_number: str):
             return f"Success: Booking Created with appointment ID = {appointment_id} "
 
         except HttpError as error:
+            print(f"error in create_repair_appointment: {error}")
             return {"error: ", error}
         
     return create_repair_appointment
