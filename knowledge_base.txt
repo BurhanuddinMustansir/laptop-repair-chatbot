@@ -1,6 +1,5 @@
-TechFix Laptop Repair Shop - Service Guide
-
-SERVICES AND PRICING:
+===SERVICES AND PRICING==
+- We service all major brands: Dell, HP, Lenovo, Apple MacBook, ASUS, Acer
 - Screen Replacement: $89-149 depending on laptop model. Takes 1-2 business days.
 - Battery Replacement: $49-79. Same-day service available.
 - Keyboard Replacement: $59-99. Takes 1-2 business days.
@@ -9,7 +8,7 @@ SERVICES AND PRICING:
 - Water Damage Repair: $99-199 diagnostic fee. Repair time varies (3-5 days).
 - Hinge Repair: $69-119. Takes 2-3 business days.
 
-GENERAL INFO:
+===GENERAL INFO==
 - Location: 123 Tech Street, Downtown
 - Hours: Monday-Friday 9am-6pm, Saturday 10am-4pm
 - We service all major brands: Dell, HP, Lenovo, Apple MacBook, ASUS, Acer
@@ -17,7 +16,7 @@ GENERAL INFO:
 - 90-day warranty on all repairs
 - Walk-ins welcome, appointments preferred for same-day service
 
-POLICIES:
+===POLICIES==
 - We provide a quote before starting any repair
 - Payment accepted: cash, card, bank transfer
 - Pick-up notification sent via WhatsApp when repair is complete

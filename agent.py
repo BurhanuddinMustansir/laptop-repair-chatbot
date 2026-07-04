@@ -1,4 +1,3 @@
-import csv
 import os
 from datetime import datetime
 from pathlib import Path 
@@ -13,10 +12,10 @@ from langchain.tools import tool
 from langchain_openai import ChatOpenAI
 from langchain_classic.agents import AgentExecutor, create_tool_calling_agent
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-from typing import Annotated
-from langchain_core.tools.base import InjectedToolArg
-from langchain_core.runnables import RunnableConfig
 from zoneinfo import ZoneInfo
+from openai import OpenAI
+from redisvl.index import SearchIndex
+from redisvl.query import VectorQuery
 
 load_dotenv()
 
@@ -29,13 +28,42 @@ def load_knowledge_base() -> str:
 
 
 @tool
-def lookup_services(query: str) -> str:
-    """Look up information about TechFix repair services, pricing, hours, policies, and general business info. 
-    Use this tool when the customer asks about services, pricing, turnaround times, location, hours, or policies."""
-    # Return the full knowledge base for the LLM to extract relevant info
-    knowledge = load_knowledge_base()
-    return knowledge
+def lookup_businesss_info(query: str) -> str:
+    """
+Look up information about TechFix's services, pricing, business hours, repair turnaround times, location, and company policies.
 
+Use this tool whenever the customer asks a question that requires knowledge about the business.
+
+Pass the user's current query as the argument. The tool will perform semantic search over the knowledge base and return only the most relevant context needed to answer the question.
+"""
+
+    def create_embeddings(text):
+        response = client.embeddings.create(
+            model="text-embedding-3-small",
+            input=text,
+            encoding_format="float"
+        )
+        return response.data[0].embedding
+
+    OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+    client = OpenAI(api_key=OPENAI_API_KEY)
+    index = SearchIndex.from_yaml("schema.yaml", redis_url=os.getenv("REDIS_URL"))
+
+    query_embedding = create_embeddings(query)
+    query = VectorQuery(
+        vector=query_embedding,
+        vector_field_name="embedding",
+        return_fields=["text"],
+        num_results=1
+    )
+
+    result = index.query(query)
+    context = result[0]["text"]
+
+    return context
+
+
+#using toolfactory temporarily for making it work, should be shifted to langgraph later
 def build_repair_order_tool(phone_number: str):
 
     @tool 
@@ -53,7 +81,6 @@ def build_repair_order_tool(phone_number: str):
             escalating their query to a manual human operator. Do not retry 
             the tool immediately.
         """
-        print(f"🤖 LEGACY BULLETPROOF DEBUG: Phone number is {contact_number}")
         
         if not contact_number:
             return "Error: Phone number failed to pass through the executor chain."
@@ -111,7 +138,7 @@ def build_repair_order_tool(phone_number: str):
 SYSTEM_PROMPT = """You are the friendly customer support assistant for TechFix 
 Laptop Repair shop.
 Your job is to:
-1. Answer customer questions about services, pricing, turnaround times, location, and policies using the lookup_services tool.
+1. Answer customer questions about services, pricing, turnaround times, location, and policies using the lookup_business_info tool by passing the users query as an argument.
 2. Help customers place repair orders by collecting their information through natural conversation.
 
 When a customer wants to book a repair:
@@ -146,7 +173,7 @@ def build_agent(tools) -> AgentExecutor:
 
 def get_bot_response(user_message: str, user_phone: str, chat_history: list) -> str:
     create_repair_order = build_repair_order_tool(phone_number=user_phone)
-    tools = [lookup_services, create_repair_order]
+    tools = [lookup_businesss_info, create_repair_order]
     agent_executor = build_agent(tools)
 
     result = agent_executor.invoke(

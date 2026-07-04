@@ -1,0 +1,21 @@
+version: '0.1.0'
+
+index:
+  name: repair_shop_index
+  prefix: doc
+  storage_type: hash
+
+fields:
+  - name: id 
+    type: tag
+
+  - name: text
+    type: text
+
+  - name: embedding
+    type: vector
+    attrs:
+      algorithm: flat
+      dims: 1536
+      distance_metric: cosine
+      datatype: float32
