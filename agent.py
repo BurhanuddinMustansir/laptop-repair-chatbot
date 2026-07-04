@@ -184,7 +184,7 @@ def build_repair_order_tool(phone_number: str):
         
     return create_repair_appointment
 
-today = datetime.now().strftime("%A, %B %d, &Y")
+today = datetime.now().strftime("%A, %B %d, %Y")
     
     
 SYSTEM_PROMPT = f"""You are the friendly customer support assistant for TechFix 
