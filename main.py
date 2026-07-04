@@ -64,7 +64,7 @@ async def receive_webhook(request: Request):
                     
                     
                     context = [
-                        json.loads(m) for m in redis_client.lrange(session_id, -10, -1)
+                        json.loads(m) for m in redis_client.lrange(session_id, -16, -1)
                     ]
                     #storing user message
                     message = {
