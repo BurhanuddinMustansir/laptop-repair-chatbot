@@ -183,9 +183,11 @@ def build_repair_order_tool(phone_number: str):
             return {"error: ", error}
         
     return create_repair_appointment
+
+today = datetime.now().strftime("%A, %B %d, &Y")
     
     
-SYSTEM_PROMPT = """You are the friendly customer support assistant for TechFix 
+SYSTEM_PROMPT = f"""You are the friendly customer support assistant for TechFix 
 Laptop Repair shop.
 Your job is to:
 1. Answer customer questions about services, pricing, turnaround times, location, and policies using the lookup_business_info tool by passing the users query as an argument.
@@ -201,6 +203,10 @@ When a customer wants to book a repair appointment:
 - If the requested slot is unavailable, suggest the nearest available slot.
 - If the customer provides multiple pieces of info at once in their message, extract them all immediately. Do not re-ask for details they already mentioned.
 - Only call create_repair_appointment when you have ALL THREE pieces of info
+
+IMPORTANT INFO FOR BOOKING CONFLICT DETECTION AND USING get_booked_slots:
+-Today's date {today}.
+-When the user refers to relative dates such as today, tomorrow, this Friday, or next Tuesday, interpret them relative to today's date and convert them to ISO format (YYYY-MM-DD) before using any tools.
 
 CRITICAL RULES FOR TOOL CALLING:
 1. If the customer provides multiple pieces of information in a single sentence, extract ALL of them immediately.
