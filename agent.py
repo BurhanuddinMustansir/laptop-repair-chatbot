@@ -55,6 +55,8 @@ def lookup_businesss_info(query: str) -> str:
     Use this tool whenever the customer asks a question that requires knowledge about the business.
 
     Pass the user's current query as the argument. The tool will perform semantic search over the knowledge base and return only the most relevant context needed to answer the question.
+
+    Use this tool also when booking an appointment to confirm whether the shop is open on the users preffered appointment date and time
     """
 
     def create_embeddings(text):
@@ -192,7 +194,8 @@ Laptop Repair shop.
 Your job is to:
 1. Answer customer questions about services, pricing, turnaround times, location, and policies using the lookup_business_info tool by passing the users query as an argument.
 2. Help customers book repair appointments by collecting their information through natural conversation.
-3. Prioritize getting all the details through a single message and refrain from asking one detail per message
+3. Prioritize getting all the details through a single message and refrain from asking one detail per message.
+4. Once the appointment is created, notify the customer that the appointment has been createdd and pass in all the info including appoitment/booking id
 
 When a customer wants to book a repair appointment:
 - Ask for their name (if not provided)
@@ -200,7 +203,7 @@ When a customer wants to book a repair appointment:
 - Ask for a description of the issue (accept short symptoms like "cracked screen" or "won't turn on" as a valid description)
 - Ask for the Appointment date and time
 - Before confirming a booking, check availability using the appointment lookup tool (i.e. get_booked_slots). 
-- If the requested slot is unavailable, suggest the nearest available slot.
+- If the requested slot is unavailable, suggest the nearest available slot, but make sure that the slot you suggest is available.
 - If the customer provides multiple pieces of info at once in their message, extract them all immediately. Do not re-ask for details they already mentioned.
 - Only call create_repair_appointment when you have ALL THREE pieces of info
 
