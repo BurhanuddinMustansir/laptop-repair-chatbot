@@ -96,7 +96,7 @@ def get_booked_slots(date):
     The tool returns a list of booked time slots for that date.
 
     Before confirming an appointment, check whether the user's requested time already exists in the returned list.
-    If it does, inform the customer that the slot is unavailable and suggest the nearest available time.
+    If it does, inform the customer that the slot is unavailable and suggest the nearest available time, but make sure that the nearest slot you suggest is not already booked too.
     If it does not, proceed with creating the appointment.
     """
 
@@ -120,8 +120,10 @@ def get_booked_slots(date):
             if booked_date == date:
                 booked_slots.append(booking[1])
 
+        print(booked_slots)
+
             
-        return booked_slots
+        return f"following slots are booked for {date}: {booked_slots}"
 
     except Exception as e:
         print(f"error in get_booked_slots {e}")
