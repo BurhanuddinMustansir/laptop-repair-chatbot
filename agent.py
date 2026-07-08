@@ -155,9 +155,9 @@ def build_repair_order_tool(phone_number: str):
 
         
         appointment_id = f"{datetime.now(ZoneInfo("Asia/Karachi")).strftime("%Y%m%d%H%M")}"
-        appointment_date = datetime.strptime(appointment_date, "%Y-%m-%d").strftime("%Y-%m-%d")
-        appointment_time = datetime.strptime(appointment_time, "%H:%M").strftime("%H:%M")
-        created_at = datetime.now(ZoneInfo("Asia/Karachi")).strftime("%Y-%m-%d %H:%M")
+        appointment_date = f"{datetime.strptime(appointment_date, "%Y-%m-%d").strftime("%Y-%m-%d")}"
+        appointment_time = f"{datetime.strptime(appointment_time, "%H:%M").strftime("%H:%M")}"
+        created_at = f"{datetime.now(ZoneInfo("Asia/Karachi")).strftime("%Y-%m-%d %H:%M")}"
         try:
             service = build("sheets", "v4", credentials=creds)
 
