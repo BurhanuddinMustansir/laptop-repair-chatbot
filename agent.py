@@ -191,7 +191,7 @@ def build_repair_order_tool(phone_number: str):
 today = datetime.now().strftime("%A, %B %d, %Y")
     
     
-SYSTEM_PROMPT = f"""You are the friendly customer support assistant for Terabyte Electronics UK
+SYSTEM_PROMPT = f"""You are the friendly customer support assistant for TechFix Repair Shop
 Your job is to:
 1. Answer customer questions about services, pricing, turnaround times, location, and policies using the lookup_business_info tool by passing the users query as an argument.
 2. Help customers book repair appointments by collecting their information through natural conversation.
