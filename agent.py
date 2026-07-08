@@ -49,41 +49,39 @@ def load_knowledge_base() -> str:
 
 @tool
 def lookup_businesss_info(query: str) -> str:
-    """Use this tool to get all the info regarding the business, services, pricing, general info, policies"""
-    # """
-    # Look up information about TechFix's services, pricing, business hours, repair turnaround times, location, and company policies.
+    """
+    Look up information about TechFix's services, pricing, business hours, repair turnaround times, location, and company policies.
 
-    # Use this tool whenever the customer asks a question that requires knowledge about the business.
+    Use this tool whenever the customer asks a question that requires knowledge about the business.
 
-    # Pass the user's current query as the argument. The tool will perform semantic search over the knowledge base and return only the most relevant context needed to answer the question.
+    Pass the user's current query as the argument. The tool will perform semantic search over the knowledge base and return only the most relevant context needed to answer the question.
 
-    # Use this tool also when booking an appointment to confirm whether the shop is open on the users preffered appointment date and time
-    # """
+    Use this tool also when booking an appointment to confirm whether the shop is open on the users preffered appointment date and time
+    """
 
-    # def create_embeddings(text):
-    #     response = client.embeddings.create(
-    #         model="text-embedding-3-small",
-    #         input=text,
-    #         encoding_format="float"
-    #     )
-    #     return response.data[0].embedding
+    def create_embeddings(text):
+        response = client.embeddings.create(
+            model="text-embedding-3-small",
+            input=text,
+            encoding_format="float"
+        )
+        return response.data[0].embedding
 
-    # OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-    # client = OpenAI(api_key=OPENAI_API_KEY)
-    # index = SearchIndex.from_yaml("schema.yaml", redis_url=os.getenv("REDIS_URL"))
+    OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+    client = OpenAI(api_key=OPENAI_API_KEY)
+    index = SearchIndex.from_yaml("schema.yaml", redis_url=os.getenv("REDIS_URL"))
 
-    # query_embedding = create_embeddings(query)
-    # query = VectorQuery(
-    #     vector=query_embedding,
-    #     vector_field_name="embedding",
-    #     return_fields=["text"],
-    #     num_results=1
-    # )
+    query_embedding = create_embeddings(query)
+    query = VectorQuery(
+        vector=query_embedding,
+        vector_field_name="embedding",
+        return_fields=["text"],
+        num_results=1
+    )
 
-    # result = index.query(query)
-    # context = result[0]["text"]
-    with open(KNOWLEDGE_BASE_PATH)as file:
-        context = file.read()
+    result = index.query(query)
+    context = result[0]["text"]
+
     return context
 
 @tool
@@ -199,7 +197,7 @@ Your job is to:
 2. Help customers book repair appointments by collecting their information through natural conversation.
 3. Prioritize getting all the details through a single message and refrain from asking one detail per message.
 4. Once the appointment is created, notify the customer that the appointment has been createdd and pass in all the info including appoitment/booking id
-5. Always Greet with the welcome to Terabyte Electronics
+5. Always Greet with the welcome to TechFix Repair shop
 
 When a customer wants to book a repair appointment:
 - Ask for their name (if not provided)
