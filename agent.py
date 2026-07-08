@@ -49,39 +49,41 @@ def load_knowledge_base() -> str:
 
 @tool
 def lookup_businesss_info(query: str) -> str:
-    """
-    Look up information about TechFix's services, pricing, business hours, repair turnaround times, location, and company policies.
+    """Use this tool to get all the info regarding the business, services, pricing, general info, policies"""
+    # """
+    # Look up information about TechFix's services, pricing, business hours, repair turnaround times, location, and company policies.
 
-    Use this tool whenever the customer asks a question that requires knowledge about the business.
+    # Use this tool whenever the customer asks a question that requires knowledge about the business.
 
-    Pass the user's current query as the argument. The tool will perform semantic search over the knowledge base and return only the most relevant context needed to answer the question.
+    # Pass the user's current query as the argument. The tool will perform semantic search over the knowledge base and return only the most relevant context needed to answer the question.
 
-    Use this tool also when booking an appointment to confirm whether the shop is open on the users preffered appointment date and time
-    """
+    # Use this tool also when booking an appointment to confirm whether the shop is open on the users preffered appointment date and time
+    # """
 
-    def create_embeddings(text):
-        response = client.embeddings.create(
-            model="text-embedding-3-small",
-            input=text,
-            encoding_format="float"
-        )
-        return response.data[0].embedding
+    # def create_embeddings(text):
+    #     response = client.embeddings.create(
+    #         model="text-embedding-3-small",
+    #         input=text,
+    #         encoding_format="float"
+    #     )
+    #     return response.data[0].embedding
 
-    OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-    client = OpenAI(api_key=OPENAI_API_KEY)
-    index = SearchIndex.from_yaml("schema.yaml", redis_url=os.getenv("REDIS_URL"))
+    # OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+    # client = OpenAI(api_key=OPENAI_API_KEY)
+    # index = SearchIndex.from_yaml("schema.yaml", redis_url=os.getenv("REDIS_URL"))
 
-    query_embedding = create_embeddings(query)
-    query = VectorQuery(
-        vector=query_embedding,
-        vector_field_name="embedding",
-        return_fields=["text"],
-        num_results=1
-    )
+    # query_embedding = create_embeddings(query)
+    # query = VectorQuery(
+    #     vector=query_embedding,
+    #     vector_field_name="embedding",
+    #     return_fields=["text"],
+    #     num_results=1
+    # )
 
-    result = index.query(query)
-    context = result[0]["text"]
-
+    # result = index.query(query)
+    # context = result[0]["text"]
+    with open(KNOWLEDGE_BASE_PATH)as file:
+        context = file.read()
     return context
 
 @tool
@@ -191,20 +193,21 @@ def build_repair_order_tool(phone_number: str):
 today = datetime.now().strftime("%A, %B %d, %Y")
     
     
-SYSTEM_PROMPT = f"""You are the friendly customer support assistant for TechFix 
-Laptop Repair shop.
+SYSTEM_PROMPT = f"""You are the friendly customer support assistant for Terabyte Electronics UK
 Your job is to:
 1. Answer customer questions about services, pricing, turnaround times, location, and policies using the lookup_business_info tool by passing the users query as an argument.
 2. Help customers book repair appointments by collecting their information through natural conversation.
 3. Prioritize getting all the details through a single message and refrain from asking one detail per message.
 4. Once the appointment is created, notify the customer that the appointment has been createdd and pass in all the info including appoitment/booking id
+5. Always Greet with the welcome to Terabyte Electronics
 
 When a customer wants to book a repair appointment:
 - Ask for their name (if not provided)
 - Ask for their device model (e.g., "Dell XPS 15", "MacBook Pro 2021" p.s it doesnt have to be the full model, only the company name works fine too)
 - Ask for a description of the issue (accept short symptoms like "cracked screen" or "won't turn on" as a valid description)
 - Ask for the Appointment date and time
-- Before confirming a booking, check availability using the appointment lookup tool (i.e. get_booked_slots). 
+- Before confirming a booking, check availability using the appointment lookup tool (i.e. get_booked_slots), Also check whether shop is open at that time using lookup_businesss_info tool. 
+- Dont book slots starting from 30 mins before closing time.
 - If the requested slot is unavailable, suggest the nearest available slot, but make sure that the slot you suggest is available.
 - If the customer provides multiple pieces of info at once in their message, extract them all immediately. Do not re-ask for details they already mentioned.
 - Only call create_repair_appointment when you have ALL THREE pieces of info
