@@ -50,11 +50,11 @@ def load_knowledge_base() -> str:
 @tool
 def lookup_businesss_info(query: str) -> str:
     """
-    Look up information about TechFix's services, pricing, business hours, repair turnaround times, location, and company policies.
+    Look up information about Spark auto detailing's services, pricing, business hours, turnaround times, location, and company policies.
 
     Use this tool whenever the customer asks a question that requires knowledge about the business.
 
-    Pass the user's current query as the argument. The tool will perform semantic search over the knowledge base and return only the most relevant context needed to answer the question.
+    Pass the user's current query as the argument or create a relevent query. The tool will perform semantic search over the knowledge base and return only the most relevant context needed to answer the question.
 
     Use this tool also when booking an appointment to confirm whether the shop is open on the users preffered appointment date and time
     """
@@ -134,9 +134,9 @@ def get_booked_slots(date):
 def build_repair_order_tool(phone_number: str):
 
     @tool 
-    def create_repair_appointment(customer_name: str, device: str, issue_description: str, appointment_date: str, appointment_time: str, contact_number: str = phone_number) -> str:
+    def create_detailing_appointment(customer_name: str, vehicle_make_model: str, service_required: str, appointment_date: str, appointment_time: str, contact_number: str = phone_number) -> str:
         """Create a new repair appoitment. Use this tool ONLY when you have collected ALL FIVE pieces of information from 
-        the customer: their name, device model, issue description, Appointment date in ISO format (YYYY-MM-DD), and appointment time in the format (HH:MM). Do NOT ask for their contact phone number, as it is handled automatically.
+        the customer: their name, Vehicle make and model, service required, Appointment date in ISO format (YYYY-MM-DD), and appointment time in the format (HH:MM). Do NOT ask for their contact phone number, as it is handled automatically.
         
         Returns:
             A success message with the appointment ID, or an error message.
@@ -162,7 +162,7 @@ def build_repair_order_tool(phone_number: str):
             service = build("sheets", "v4", credentials=creds)
 
             values = [
-                [customer_name, contact_number, device, created_at, "Pending", issue_description, appointment_id, appointment_date, appointment_time]
+                [customer_name, contact_number, vehicle_make_model, created_at, "Pending", service_required, appointment_id, appointment_date, appointment_time]
             ]
 
             body = {"values": values}
@@ -183,32 +183,33 @@ def build_repair_order_tool(phone_number: str):
             return f"Success: Booking Created with appointment ID = {appointment_id} "
 
         except HttpError as error:
-            print(f"error in create_repair_appointment: {error}")
+            print(f"error in create_detailing_appointment: {error}")
             return {"error: ", error}
         
-    return create_repair_appointment
+    return create_detailing_appointment
 
 today = datetime.now().strftime("%A, %B %d, %Y")
     
     
-SYSTEM_PROMPT = f"""You are the friendly customer support assistant for TechFix Repair Shop
+SYSTEM_PROMPT = f"""You are the friendly customer support assistant for Spark Auto Detailing
 Your job is to:
 1. Answer customer questions about services, pricing, turnaround times, location, and policies using the lookup_business_info tool by passing the users query as an argument.
-2. Help customers book repair appointments by collecting their information through natural conversation.
+2. Help customers book detailing appointments by collecting their information through natural conversation.
 3. Prioritize getting all the details through a single message and refrain from asking one detail per message.
 4. Once the appointment is created, notify the customer that the appointment has been createdd and pass in all the info including appoitment/booking id
-5. Always Greet with the welcome to TechFix Repair shop
+5. Always Greet with the welcome to Spark Auto Detailing and be transparent that you are an AI assistant and Request for human staff can be made anytime by the customer
 
 When a customer wants to book a repair appointment:
 - Ask for their name (if not provided)
-- Ask for their device model (e.g., "Dell XPS 15", "MacBook Pro 2021" p.s it doesnt have to be the full model, only the company name works fine too)
-- Ask for a description of the issue (accept short symptoms like "cracked screen" or "won't turn on" as a valid description)
+- Ask for their Vehicle Make and Model (e.g., "Porche 911", p.s it doesnt have to be the full model, only the company name works fine too)
+- Ask for the Service Required
 - Ask for the Appointment date and time
 - Before confirming a booking, check availability using the appointment lookup tool (i.e. get_booked_slots), Also check whether shop is open at that time using lookup_businesss_info tool. 
 - Dont book slots starting from 30 mins before closing time.
 - If the requested slot is unavailable, suggest the nearest available slot, but make sure that the slot you suggest is available.
 - If the customer provides multiple pieces of info at once in their message, extract them all immediately. Do not re-ask for details they already mentioned.
-- Only call create_repair_appointment when you have ALL THREE pieces of info
+- Only call create_detailing_appointment when you have ALL THREE pieces of info
+- The assistant must clearly state that appointments are only confirmed after approval by a staff member.
 
 IMPORTANT INFO FOR BOOKING CONFLICT DETECTION AND USING get_booked_slots:
 -Today's date {today}.
@@ -217,7 +218,7 @@ IMPORTANT INFO FOR BOOKING CONFLICT DETECTION AND USING get_booked_slots:
 CRITICAL RULES FOR TOOL CALLING:
 1. If the customer provides multiple pieces of information in a single sentence, extract ALL of them immediately.
 2. Do not re-ask or double-check information that was already clearly stated in their message history.
-3. As long as you have something written for all THREE fields (even if partial), trigger 'create_repair_appointment' immediately. Do not stall.
+3. As long as you have something written for all required fields (even if partial), trigger 'create_detailing_appointment' immediately. Do not stall.
 
 Keep responses concise and friendly. Use emojis sparingly. Always be helpful."""
 
@@ -238,8 +239,8 @@ def build_agent(tools) -> AgentExecutor:
 
 
 def get_bot_response(user_message: str, user_phone: str, chat_history: list) -> str:
-    create_repair_appointment = build_repair_order_tool(phone_number=user_phone)
-    tools = [lookup_businesss_info, create_repair_appointment, get_booked_slots]
+    create_detailing_appointment = build_repair_order_tool(phone_number=user_phone)
+    tools = [lookup_businesss_info, create_detailing_appointment, get_booked_slots]
     agent_executor = build_agent(tools)
 
     result = agent_executor.invoke(

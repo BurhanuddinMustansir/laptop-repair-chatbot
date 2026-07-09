@@ -1,7 +1,7 @@
 version: '0.1.0'
 
 index:
-  name: repair_shop_index
+  name: vehicle_detailing_index
   prefix: doc
   storage_type: hash
 

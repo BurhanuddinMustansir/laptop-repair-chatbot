@@ -138,7 +138,7 @@ async def recieve_update(request: Request):
     name = body.get("customer_name")
     appointment_id = body.get("appointment_id")
 
-    message = f"{name} Your Repair appointment with the Appointment-ID: {appointment_id} has been confirmed"
+    message = f"{name} Your appointment with the Appointment-ID: {appointment_id} has been confirmed"
     try: 
         await send_whatsapp_message(phone, message)
     except Exception as e:
