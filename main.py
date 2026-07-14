@@ -3,7 +3,7 @@ import json
 
 import httpx
 from dotenv import load_dotenv
-from fastapi import FastAPI, Request, Response
+from fastapi import FastAPI, Request, Response, Form
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -171,7 +171,7 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 
 
 @app.post('/shop')
-async def display_shop_data(request: Request, response_class=HTMLResponse):
+async def display_shop_data(request: Request, response_class=HTMLResponse, shop_id: int = Form(...)):
     body = await request.json()
     shop_id = body.get("shop_id")
     print(f"body of post: shop = ", body)
