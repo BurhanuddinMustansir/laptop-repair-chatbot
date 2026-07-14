@@ -174,6 +174,7 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 async def display_shop_data(request: Request, response_class=HTMLResponse):
     body = request.json()
     shop_id = body.get("shop_id")
+    print(f"body of post: shop = ", body)
 
     conn, cursor = get_db_cursor(DATABASE_URL)
 
@@ -181,6 +182,7 @@ async def display_shop_data(request: Request, response_class=HTMLResponse):
         cursor.execute("SELECT * FROM shops WHERE id = %s;", (shop_id,))
 
         shop_data = cursor.fetchone()
+        print(f"shop data: {shop_data}")
 
     finally:
         cursor.close()
