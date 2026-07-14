@@ -163,7 +163,7 @@ def get_db_cursor(connection_string):
 
 @app.get('/shop')
 async def load_form(request: Request, response_class=HTMLResponse):
-    return templates.TemplateResponse("index.html", {"request": request})
+    return templates.TemplateResponse(request=request, name="index.html")
 
 
 DATABASE_URL = os.getenv("DATABASE_URL")
@@ -187,4 +187,4 @@ async def display_shop_data(request: Request, response_class=HTMLResponse):
         conn.close()
 
 
-    return templates.TemplateResponse("index.html", {"request": Request, "shop": shop_data})
+    return templates.TemplateResponse(request=request, name="index.html", context={"shop": shop_data})
