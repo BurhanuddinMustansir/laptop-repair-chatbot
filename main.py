@@ -8,6 +8,9 @@ from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 import redis
+from fastapi.templating import Jinja2Templates
+import psycopg 
+from psycopg.rows import dict_row
 
 from agent import get_bot_response
 
@@ -145,3 +148,43 @@ async def recieve_update(request: Request):
         print(f"Error sending whatsapp message: {e}")
 
     return {"status": "ok"}
+
+
+templates = Jinja2Templates(directory="templates")
+
+
+
+def get_db_cursor(connection_string):
+    conn = psycopg.connect(connection_string)
+    # Passing dict_row forces the cursor to output dictionaries instead of tuples
+    cursor = conn.cursor(row_factory=dict_row)
+    return conn, cursor
+
+
+@app.get('/shop')
+async def load_form(request: Request, response_class=HTMLResponse):
+    return templates.TemplateResponse("index.html", {"request": request})
+
+
+DATABASE_URL = os.getenv("DATABASE_URL")
+
+
+
+@app.post('/shop')
+async def display_shop_data(request: Request, response_class=HTMLResponse):
+    body = request.json()
+    shop_id = body.get("shop_id")
+
+    conn, cursor = get_db_cursor(DATABASE_URL)
+
+    try:
+        cursor.execute("SELECT * FROM shops WHERE id = %s;", (shop_id,))
+
+        shop_data = cursor.fetchone()
+
+    finally:
+        cursor.close()
+        conn.close()
+
+
+    return templates.TemplateResponse("index.html", {"request": Request, "shop": shop_data})

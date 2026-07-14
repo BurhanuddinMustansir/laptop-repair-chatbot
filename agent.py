@@ -38,12 +38,42 @@ SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
 
 creds = service_account.Credentials.from_service_account_info(credentials_info, scopes=SCOPES)
 SPREADSHEET_ID = os.getenv("SPREADSHEET_ID")
+CONVERSATIONS_SHEET_ID = os.getenv("CONVERSATIONS_SHEET_ID")
 
 
 KNOWLEDGE_BASE_PATH = Path(__file__).parent/ "knowledge_base.txt"
 
 def load_knowledge_base() -> str:
     return KNOWLEDGE_BASE_PATH.read_text(encoding="utf-8")
+
+def build_human_handoff_tool(phone_number):
+
+    @tool
+    def initiate_human_handoff(contact_number:str = phone_number):
+        """Use this tool when the user requests to chat with a human/staff from techfix"""
+        try:
+            service = build("sheets", "v4", credentials=creds)
+            created_at = f"{datetime.now(ZoneInfo("Asia/Karachi")).strftime("%Y-%m-%d %H:%M")}"
+            values =  [contact_number, "Human"]
+            body = {
+                "values": values
+            }
+            result = (
+                    service.spreadsheets()
+                    .values()
+                    .append(
+                        spreadsheetId=SPREADSHEET_ID,
+                        range='A1',
+                        valueInputOption="USER_ENTERED",
+                        body=body,
+                        insertDataOption="INSERT_ROWS"
+                    )
+                    .execute()
+                )
+        except Exception as e:
+            print(f"error: {e}")
+    
+    return initiate_human_handoff
 
 
 
@@ -240,7 +270,8 @@ def build_agent(tools) -> AgentExecutor:
 
 def get_bot_response(user_message: str, user_phone: str, chat_history: list) -> str:
     create_detailing_appointment = build_repair_order_tool(phone_number=user_phone)
-    tools = [lookup_businesss_info, create_detailing_appointment, get_booked_slots]
+    initiate_human_handoff = build_human_handoff_tool(user_phone)
+    tools = [lookup_businesss_info, create_detailing_appointment, get_booked_slots, initiate_human_handoff]
     agent_executor = build_agent(tools)
 
     result = agent_executor.invoke(
