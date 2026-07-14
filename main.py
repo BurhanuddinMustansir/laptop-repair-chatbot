@@ -172,9 +172,7 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 
 @app.post('/shop')
 async def display_shop_data(request: Request, response_class=HTMLResponse, shop_id: int = Form(...)):
-    body = await request.json()
-    shop_id = body.get("shop_id")
-    print(f"body of post: shop = ", body)
+    print(f"shop id = {shop_id}")
 
     conn, cursor = get_db_cursor(DATABASE_URL)
 
