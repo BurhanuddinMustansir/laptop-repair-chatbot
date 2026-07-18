@@ -297,8 +297,10 @@ def tools_condition(state: AgentState):
     print("this is tools condition")
     messages = state["messages"][-1]
     if messages.tool_calls:
+        print("now routing to tool node")
         return "tool_node"
     else:
+        print("now routing to end")
         return END
     
 def route_query(state: AgentState, config: RunnableConfig):
@@ -397,6 +399,7 @@ def get_bot_response(compiled_agent: CompiledStateGraph, user_message: str, user
 
     payload = {"messages": [HumanMessage(content=user_message)]}
     final_output = compiled_agent.invoke(payload, config=runtimeConfig)
+    print(f"final output: {final_output}")
     ai_response_text = final_output["messages"][-1].content
     print(f"ai_response_text: {ai_response_text}")
     return ai_response_text
