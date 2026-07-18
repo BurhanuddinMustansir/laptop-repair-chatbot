@@ -27,7 +27,7 @@ VERIFY_TOKEN = os.getenv("VERIFY_TOKEN")
 REDIS_URL = os.getenv("REDIS_URL")
 
 @asynccontextmanager
-async def lifespan():
+async def lifespan(app: FastAPI):
     with RedisSaver.from_conn_string(REDIS_URL, ttl=3600) as checkpointer:
         checkpointer.setup()
 
@@ -146,7 +146,7 @@ class ChatResponse(BaseModel):
 
 @app.post("/chat", response_model=ChatResponse)
 def web_chat(req: ChatRequest):
-    reply = get_bot_response(req.message)
+    reply = agent_langgraph.get_bot_response(req.message)
     return ChatResponse(reply=reply)
 
 
