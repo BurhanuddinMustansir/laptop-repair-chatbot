@@ -12,18 +12,36 @@ from fastapi.templating import Jinja2Templates
 import psycopg 
 from psycopg.rows import dict_row
 
-from agent_langgraph import get_bot_response
+import agent_langgraph
+from langgraph.checkpoint.redis import RedisSaver
+from contextlib import asynccontextmanager
 
 load_dotenv()
 
 #creating the fast api instance
-app = FastAPI(title="TechFix WhatsApp Bot")
 
 WHATSAPP_ACCESS_TOKEN = os.getenv("WHATSAPP_ACCESS_TOKEN")
 WHATSAPP_PHONE_NUMBER_ID = os.getenv("WHATSAPP_PHONE_NUMBER_ID")
 VERIFY_TOKEN = os.getenv("VERIFY_TOKEN")
 
-# redis_client = redis.from_url(os.getenv("REDIS_URL"), decode_responses=True)
+REDIS_URL = os.getenv("REDIS_URL")
+
+@asynccontextmanager
+async def lifespan():
+    with RedisSaver.from_conn_string(REDIS_URL, ttl=3600) as checkpointer:
+        checkpointer.setup()
+
+        app.state.compiled_agent = agent_langgraph.workflow.compile(checkpointer=checkpointer)
+
+        print("Redis checkpointer initialized and attached to app state.")
+
+        yield
+        print("Lifespan ending. Checkpointer connection context safely closing.")
+
+app = FastAPI(lifespan=lifespan)
+
+
+
 
 @app.get("/health")
 def health():
@@ -79,7 +97,8 @@ async def receive_webhook(request: Request):
                     #setting expiry at one hour
                     # redis_client.expire(session_id, 3600)
                     try:
-                        reply = get_bot_response(text, sender)
+                        active_agent = request.app.state.compiled_agent
+                        reply = agent_langgraph.get_bot_response(active_agent, text, sender)
                         print(f"Bot response generated: {reply}")
                         await send_whatsapp_message(sender, reply)
                         # message = {

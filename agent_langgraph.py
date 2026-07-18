@@ -11,6 +11,7 @@ import os
 from dotenv import load_dotenv
 from datetime import datetime
 from pathlib import Path 
+from langgraph.graph.state import CompiledStateGraph
 
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
@@ -376,12 +377,11 @@ workflow.add_conditional_edges("agent_node", tools_condition)
 workflow.add_edge("tool_node", "agent_node")
 
 
+
 REDIS_URL = os.getenv("REDIS_URL")
-memory_checkpointer = RedisSaver.from_conn_string(REDIS_URL, ttl=3600)
-agent = workflow.compile(checkpointer=memory_checkpointer)
 
 
-def get_bot_response(user_message: str, user_phone: str) -> str:
+def get_bot_response(compiled_agent: CompiledStateGraph, user_message: str, user_phone: str) -> str:
     runtimeConfig = {
         "configurable": {
             "thread_id": user_phone,
@@ -390,7 +390,7 @@ def get_bot_response(user_message: str, user_phone: str) -> str:
     }
 
     payload = {"messages": [HumanMessage(content=user_message)]}
-    final_output = agent.invoke(payload, config=runtimeConfig)
+    final_output = compiled_agent.invoke(payload, config=runtimeConfig)
     ai_response_text = final_output["messages"][-1].content
     return ai_response_text
 
