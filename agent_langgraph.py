@@ -7,6 +7,7 @@ from langgraph.prebuilt import ToolNode
 from langchain_core.runnables import RunnableConfig
 from operator import add
 from langgraph.checkpoint.redis import RedisSaver
+from langgraph.graph.message import add_messages
 import os
 from dotenv import load_dotenv
 from datetime import datetime
@@ -287,7 +288,7 @@ Keep responses concise and friendly. Use emojis sparingly. Always be helpful."""
 
 #defining our state
 class AgentState(TypedDict):
-    messages: Annotated[List, add]
+    messages: Annotated[List, add_messages]
 
 
 tools_list = [lookup_businesss_info, get_booked_slots, create_detailing_appointment, initiate_human_handoff]
@@ -372,7 +373,7 @@ def call_agent(state: AgentState):
     messages = state["messages"]
     chain = prompt | llm
     response = chain.invoke({"messages": messages})
-    print("response")
+    print(response)
     return {"messages": [response]}
 
 
