@@ -27,27 +27,27 @@ from redisvl.query import VectorQuery
 
 load_dotenv()
 
-# credentials_info = {
-#             "type": "service_account",
-#             "project_id": os.getenv("GCP_PROJECT_ID"),
-#             "private_key_id": os.getenv("GCP_PRIVATE_KEy_ID"),
-#             # fixing potential newline formatting issues
-#             "private_key": os.getenv("GCP_PRIVATE_KEY").replace('\\n', '\n'),
-#             "client_email": os.getenv("GCP_CLIENT_EMAIL"),
-#             "client_id": os.getenv("GCP_CLIENT_ID"),
-#             "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-#             "token_uri": "https://oauth2.googleapis.com/token",
-#             "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-#             "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/laptop-repair-server%40laptop-repair-2008.iam.gserviceaccount.com",
-#             "universe_domain": "googleapis.com"
-#         }
+credentials_info = {
+            "type": "service_account",
+            "project_id": os.getenv("GCP_PROJECT_ID"),
+            "private_key_id": os.getenv("GCP_PRIVATE_KEy_ID"),
+            # fixing potential newline formatting issues
+            "private_key": os.getenv("GCP_PRIVATE_KEY").replace('\\n', '\n'),
+            "client_email": os.getenv("GCP_CLIENT_EMAIL"),
+            "client_id": os.getenv("GCP_CLIENT_ID"),
+            "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+            "token_uri": "https://oauth2.googleapis.com/token",
+            "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+            "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/laptop-repair-server%40laptop-repair-2008.iam.gserviceaccount.com",
+            "universe_domain": "googleapis.com"
+        }
 
 SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
 
-# creds = service_account.Credentials.from_service_account_info(credentials_info, scopes=SCOPES)
+creds = service_account.Credentials.from_service_account_info(credentials_info, scopes=SCOPES)
 
-SERVICE_ACCOUNT_FILE = "service_account_credentials.json"
-creds = service_account.Credentials.from_service_account_file(SERVICE_ACCOUNT_FILE)
+# SERVICE_ACCOUNT_FILE = "service_account_credentials.json"
+# creds = service_account.Credentials.from_service_account_file(SERVICE_ACCOUNT_FILE)
 SPREADSHEET_ID = os.getenv("SPREADSHEET_ID")
 
 
