@@ -7,12 +7,12 @@ from fastapi import FastAPI, Request, Response, Form
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
-import redis
+# import redis
 from fastapi.templating import Jinja2Templates
 import psycopg 
 from psycopg.rows import dict_row
 
-from agent import get_bot_response
+from agent_langgraph import get_bot_response
 
 load_dotenv()
 
@@ -23,7 +23,7 @@ WHATSAPP_ACCESS_TOKEN = os.getenv("WHATSAPP_ACCESS_TOKEN")
 WHATSAPP_PHONE_NUMBER_ID = os.getenv("WHATSAPP_PHONE_NUMBER_ID")
 VERIFY_TOKEN = os.getenv("VERIFY_TOKEN")
 
-redis_client = redis.from_url(os.getenv("REDIS_URL"), decode_responses=True)
+# redis_client = redis.from_url(os.getenv("REDIS_URL"), decode_responses=True)
 
 @app.get("/health")
 def health():
@@ -66,28 +66,28 @@ async def receive_webhook(request: Request):
                     session_id = f"session:{sender}"
                     
                     
-                    context = [
-                        json.loads(m) for m in redis_client.lrange(session_id, -16, -1)
-                    ]
+                    # context = [
+                    #     json.loads(m) for m in redis_client.lrange(session_id, -16, -1)
+                    # ]
                     #storing user message
                     message = {
                         "role": "user",
                         "content": text
                     }
-                    redis_client.rpush(session_id, json.dumps(message))
+                    # redis_client.rpush(session_id, json.dumps(message))
                     
                     #setting expiry at one hour
-                    redis_client.expire(session_id, 3600)
+                    # redis_client.expire(session_id, 3600)
                     try:
-                        reply = get_bot_response(text, sender, context)
+                        reply = get_bot_response(text, sender)
                         print(f"Bot response generated: {reply}")
                         await send_whatsapp_message(sender, reply)
-                        message = {
-                            "role": "assistant",
-                            "content": reply
-                        }
-                        redis_client.rpush(session_id, json.dumps(message))
-                        redis_client.expire(session_id, 3600)
+                        # message = {
+                        #     "role": "assistant",
+                        #     "content": reply
+                        # }
+                        # redis_client.rpush(session_id, json.dumps(message))
+                        # redis_client.expire(session_id, 3600)
                     except Exception as e:
                         print(f"Error executing bot or sending message: {e}")
 

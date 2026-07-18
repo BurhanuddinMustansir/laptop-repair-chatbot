@@ -272,6 +272,12 @@ def get_bot_response(user_message: str, user_phone: str, chat_history: list) -> 
     create_detailing_appointment = build_repair_order_tool(phone_number=user_phone)
     initiate_human_handoff = build_human_handoff_tool(user_phone)
     tools = [lookup_businesss_info, create_detailing_appointment, get_booked_slots, initiate_human_handoff]
+    runtimeConfig = {
+        "configurable": {
+            "thread_id": user_phone,
+            "phone_number": user_phone
+        }
+    }
     agent_executor = build_agent(tools)
 
     result = agent_executor.invoke(

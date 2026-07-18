@@ -11,3 +11,6 @@ calender_api_test.py
 car_detailer_knowledge_base.txt
 knowledge_base.txt
 test_connection.py
+agent.py
+resources/
+tests/
