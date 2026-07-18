@@ -294,6 +294,7 @@ tools_list = [lookup_businesss_info, get_booked_slots, create_detailing_appointm
 tools_node = ToolNode(tools_list)
 
 def tools_condition(state: AgentState):
+    print("this is tools condition")
     messages = state["messages"][-1]
     if messages.tool_calls:
         return "tool_node"
@@ -301,6 +302,7 @@ def tools_condition(state: AgentState):
         return END
     
 def route_query(state: AgentState, config: RunnableConfig):
+    print("route query running")
     try:
         configurable = config.get("configurable", {})
         contact_number = configurable.get("phone_number", None)
@@ -322,8 +324,10 @@ def route_query(state: AgentState, config: RunnableConfig):
             if phone == str(contact_number):
                 status = data[1]
                 if status == "Human":
+                    print("human needed, ending convo")
                     return END
                 elif status == "AI":
+                    print("passing to agent_node")
                     return "agent_node"
                 
         created_at = f"{datetime.now(ZoneInfo("Asia/Karachi")).strftime("%Y-%m-%d %H:%M")}"
@@ -362,9 +366,11 @@ llm = ChatOpenAI(model="gpt-4o-mini").bind_tools(tools_list)
 
 def call_agent(state: AgentState):
     """Decide response using tools and context"""
+    print("this is agent_node")
     messages = state["messages"]
     chain = prompt | llm
     response = chain.invoke({"messages": messages})
+    print("response")
     return {"messages": [response]}
 
 
@@ -392,7 +398,7 @@ def get_bot_response(compiled_agent: CompiledStateGraph, user_message: str, user
     payload = {"messages": [HumanMessage(content=user_message)]}
     final_output = compiled_agent.invoke(payload, config=runtimeConfig)
     ai_response_text = final_output["messages"][-1].content
-    print(ai_response_text)
+    print(f"ai_response_text: {ai_response_text}")
     return ai_response_text
 
 
