@@ -28,7 +28,7 @@ REDIS_URL = os.getenv("REDIS_URL")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    with RedisSaver.from_conn_string(REDIS_URL, ttl=3600) as checkpointer:
+    with RedisSaver.from_conn_string(REDIS_URL, ttl={"default_ttl": 3600}) as checkpointer:
         checkpointer.setup()
 
         app.state.compiled_agent = agent_langgraph.workflow.compile(checkpointer=checkpointer)
