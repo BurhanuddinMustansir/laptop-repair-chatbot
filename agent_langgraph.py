@@ -392,6 +392,7 @@ def get_bot_response(compiled_agent: CompiledStateGraph, user_message: str, user
     payload = {"messages": [HumanMessage(content=user_message)]}
     final_output = compiled_agent.invoke(payload, config=runtimeConfig)
     ai_response_text = final_output["messages"][-1].content
+    print(ai_response_text)
     return ai_response_text
 
 
