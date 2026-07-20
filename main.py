@@ -7,6 +7,7 @@ from fastapi import FastAPI, Request, Response, Form
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
+from fastapi.middleware.cors import CORSMiddleware
 # import redis
 from fastapi.templating import Jinja2Templates
 import psycopg 
@@ -40,6 +41,15 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
+app.add_middleware(
+    CORSMiddleware,
+    # Allow the specific URL domain where your independent client is running.
+    # Use ["*"] ONLY for temporary local development/testing to allow any domain.
+    allow_origins=["*"], 
+    allow_credentials=True,
+    allow_methods=["*"],  # Allows POST, GET, OPTIONS, etc.
+    allow_headers=["*"],  # Allows Content-Type, Authorization, etc.
+)
 
 
 
