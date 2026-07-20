@@ -146,20 +146,6 @@ async def send_whatsapp_message(to: str, text:str):
         print(f"Meta Response Status: {response.status_code}")
         print(f"Meta Response Body: {response.text}")
 
-
-
-class ChatRequest(BaseModel):
-    message: str
-
-class ChatResponse(BaseModel):
-    reply: str
-
-@app.post("/chat", response_model=ChatResponse)
-def web_chat(req: ChatRequest):
-    reply = agent_langgraph.get_bot_response(req.message)
-    return ChatResponse(reply=reply)
-
-
 @app.post("/update")
 async def recieve_update(request: Request):
     body = await request.json()
@@ -217,3 +203,16 @@ async def display_shop_data(request: Request, response_class=HTMLResponse, shop_
 
 
     return templates.TemplateResponse(request=request, name="shop.html", context={"shop": shop_data})
+
+class ChatRequest(BaseModel):
+    message: str
+
+class ChatResponse(BaseModel):
+    reply: str
+
+@app.post("/chat", response_model=ChatResponse)
+def web_chat(request: Request, req: ChatRequest):
+    print(req.message)
+    active_agent = request.app.state.compiled_agent
+    reply = agent_langgraph.get_bot_response(active_agent, req.message, "894839483")
+    return ChatResponse(reply=reply)
