@@ -27,6 +27,7 @@ VERIFY_TOKEN = os.getenv("VERIFY_TOKEN")
 
 REDIS_URL = os.getenv("REDIS_URL")
 
+#async context manager for creating teh redis checkpointer once per launch
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     async with AsyncShallowRedisSaver.from_conn_string(
