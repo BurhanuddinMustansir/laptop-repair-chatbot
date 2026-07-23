@@ -233,7 +233,7 @@ def web_chat(request: Request, req: ChatRequest):
     finally:
         cursor.close()
         conn.close()
-    system_prompt = shop_data.system_instructions
+    system_prompt = shop_data["system_instructions"]
     print(system_prompt)
     tools_allowed = [tool.strip() for tool in shop_data.tools.split(",") if tool.strip()]
     thread_id = f"{shop_id}:{req.session_id}"
