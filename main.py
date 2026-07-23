@@ -14,7 +14,7 @@ import psycopg
 from psycopg.rows import dict_row
 
 import agent_langgraph
-from langgraph.checkpoint.redis import RedisSaver
+from langgraph.checkpoint.redis.ashallow import AsyncShallowRedisSaver
 from contextlib import asynccontextmanager
 
 load_dotenv()
@@ -29,12 +29,16 @@ REDIS_URL = os.getenv("REDIS_URL")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    with RedisSaver.from_conn_string(REDIS_URL, ttl={"default_ttl": 3600}) as checkpointer:
-        checkpointer.setup()
+    with AsyncShallowRedisSaver.from_conn_string(
+        REDIS_URL, 
+        ttl={"default_ttl": 60, "refresh_on_read": True}
+        ) as checkpointer:
+
+        await checkpointer.setup()
 
         app.state.compiled_agent = agent_langgraph.workflow.compile(checkpointer=checkpointer)
 
-        print("Redis checkpointer initialized and attached to app state.")
+        print("Redis checkpointer initialized with ttl: 60min and AsyncShallowRedisSaver to minimize memory usage and attached to app state.")
 
         yield
         print("Lifespan ending. Checkpointer connection context safely closing.")
@@ -171,7 +175,7 @@ templates = Jinja2Templates(directory="templates")
 
 def get_db_cursor(connection_string):
     conn = psycopg.connect(connection_string)
-    # Passing dict_row forces the cursor to output dictionaries instead of tuples
+    # Passing dict_row to force the cursor to output dictionaries instead of tuples
     cursor = conn.cursor(row_factory=dict_row)
     return conn, cursor
 
@@ -206,6 +210,8 @@ async def display_shop_data(request: Request, response_class=HTMLResponse, shop_
 
 class ChatRequest(BaseModel):
     message: str
+    shop_id: int
+    session_id: str
 
 class ChatResponse(BaseModel):
     reply: str
@@ -213,6 +219,80 @@ class ChatResponse(BaseModel):
 @app.post("/chat", response_model=ChatResponse)
 def web_chat(request: Request, req: ChatRequest):
     print(req.message)
+    print(req.shop_id)
+    shop_id = req.shop_id
+    conn, cursor = get_db_cursor(DATABASE_URL)
+
+    try:
+        cursor.execute("SELECT * FROM shops WHERE id = %s;", (shop_id,))
+
+        shop_data = cursor.fetchone()
+        print(f"shop data: {shop_data}")
+
+    finally:
+        cursor.close()
+        conn.close()
+    system_prompt = shop_data.system_instructions
+    print(system_prompt)
+    tools_allowed = [tool.strip() for tool in shop_data.tools.split(",") if tool.strip()]
+    thread_id = f"{shop_id}:{req.session_id}"
+    runtimeConfig = {
+        "configurable": {
+            "thread_id": thread_id,
+            "shop_id": shop_id,
+            "phone_number": "web",
+            "system_prompt": system_prompt,
+            "tools_allowed": tools_allowed
+
+        }
+    }
     active_agent = request.app.state.compiled_agent
-    reply = agent_langgraph.get_bot_response(active_agent, req.message, "894839483")
+    reply = agent_langgraph.get_bot_response(active_agent, req.message, runtimeConfig)
     return ChatResponse(reply=reply)
+
+
+
+
+
+# sql query for the postgres addition, so it actually works
+# INSERT INTO shops (
+#     id,
+#     name,
+#     currency,
+#     timezone,
+#     system_instructions,
+#     tools
+# )
+# VALUES (
+#     2,
+#     'TechFix Repair Shop',
+#     'GBP',
+#     'Europe/London',
+#     '''You are the friendly customer support assistant for TechFix Laptop Repair shop
+# Your job is to:
+# 1. Answer customer questions about services, pricing, turnaround times, location, and policies using the lookup_business_info tool by passing the users query as an argument.
+# 2. Help customers book detailing appointments by collecting their information through natural conversation.
+# 3. Prioritize getting all the details through a single message and refrain from asking one detail per message.
+# 4. Once the appointment is created, notify the customer that the appointment has been createdd and pass in all the info including appoitment/booking id
+# 5. Always Greet with the welcome to Techfix laptop repair and be transparent that you are an AI assistant and Request for human staff can be made anytime by the customer
+
+# When a customer wants to book a repair appointment:
+# - Ask for their name (if not provided)
+# - Ask for their Laptop Model (e.g., "Macbook Pro", p.s it doesnt have to be the full model, only the company name works fine too)
+# - Ask for the Issue Description (one word descriptions are accepted)
+# - Ask for the Appointment date and time
+# - Before confirming a booking, check availability using the appointment lookup tool (i.e. get_booked_slots), Also check whether shop is open at that time using lookup_businesss_info tool. 
+# - Dont book slots starting from 30 mins before closing time.
+# - If the requested slot is unavailable, suggest the nearest available slot, but make sure that the slot you suggest is available.
+# - If the customer provides multiple pieces of info at once in their message, extract them all immediately. Do not re-ask for details they already mentioned.
+# - Only call create_detailing_appointment when you have ALL THREE pieces of info
+# - The assistant must clearly state that appointments are only confirmed after approval by a staff member.
+
+# CRITICAL RULES FOR TOOL CALLING:
+# 1. If the customer provides multiple pieces of information in a single sentence, extract ALL of them immediately.
+# 2. Do not re-ask or double-check information that was already clearly stated in their message history.
+# 3. As long as you have something written for all required fields (even if partial) and the users will, trigger create_appointment immediately. Do not stall.
+
+# Keep responses concise and friendly. Use emojis sparingly. Always be helpful''',
+#     'lookup_businesss_info,get_booked_slots,create_appointment,initiate_human_handoff'
+# );

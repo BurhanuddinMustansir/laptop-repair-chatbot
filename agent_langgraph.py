@@ -24,6 +24,7 @@ from zoneinfo import ZoneInfo
 from openai import OpenAI
 from redisvl.index import SearchIndex
 from redisvl.query import VectorQuery
+from redisvl.query.filter import Tag
 
 
 
@@ -109,9 +110,9 @@ def initiate_human_handoff(config: RunnableConfig):
 
 
 @tool
-def lookup_businesss_info(query: str) -> str:
+def lookup_businesss_info(query: str, config: RunnableConfig) -> str:
     """
-    Look up information about Spark auto detailing's services, pricing, business hours, turnaround times, location, and company policies.
+    Look up information about businesse's services, pricing, business hours, turnaround times, location, and company policies.
 
     Use this tool whenever the customer asks a question that requires knowledge about the business.
 
@@ -131,13 +132,18 @@ def lookup_businesss_info(query: str) -> str:
     OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
     client = OpenAI(api_key=OPENAI_API_KEY)
     index = SearchIndex.from_yaml("schema.yaml", redis_url=os.getenv("REDIS_URL"))
+    configurable = config.get("configurable", {})
+    shop_id = configurable.get("shop_id")
+
+    filter = Tag("shop_id") == shop_id
 
     query_embedding = create_embeddings(query)
     query = VectorQuery(
         vector=query_embedding,
         vector_field_name="embedding",
         return_fields=["text"],
-        num_results=1
+        num_results=1,
+        filter_expression= filter
     )
 
     result = index.query(query)
@@ -192,9 +198,9 @@ def get_booked_slots(date):
 
 
 @tool 
-def create_detailing_appointment(customer_name: str, vehicle_make_model: str, service_required: str, appointment_date: str, appointment_time: str, config: RunnableConfig) -> str:
+def create_appointment(customer_name: str, vehicle_make_model: str, service_required: str, appointment_date: str, appointment_time: str, config: RunnableConfig) -> str:
     """Create a new repair appoitment. Use this tool ONLY when you have collected ALL FIVE pieces of information from 
-    the customer: their name, Vehicle make and model, service required, Appointment date in ISO format (YYYY-MM-DD), and appointment time in the format (HH:MM). Do NOT ask for their contact phone number, as it is handled automatically.
+    the customer: the required information is mentioned in the system prompt Do NOT ask for their contact phone number, as it is handled automatically.
     
     Returns:
         A success message with the appointment ID, or an error message.
@@ -244,44 +250,40 @@ def create_detailing_appointment(customer_name: str, vehicle_make_model: str, se
         return f"Success: Booking Created with appointment ID = {appointment_id} "
 
     except HttpError as error:
-        print(f"error in create_detailing_appointment: {error}")
+        print(f"error in create_appointment: {error}")
         return {"error: ", error}
         
 
 
-today = datetime.now().strftime("%A, %B %d, %Y")
+
     
     
-SYSTEM_PROMPT = f"""You are the friendly customer support assistant for Spark Auto Detailing
-Your job is to:
-1. Answer customer questions about services, pricing, turnaround times, location, and policies using the lookup_business_info tool by passing the users query as an argument.
-2. Help customers book detailing appointments by collecting their information through natural conversation.
-3. Prioritize getting all the details through a single message and refrain from asking one detail per message.
-4. Once the appointment is created, notify the customer that the appointment has been createdd and pass in all the info including appoitment/booking id
-5. Always Greet with the welcome to Spark Auto Detailing and be transparent that you are an AI assistant and Request for human staff can be made anytime by the customer
+# SYSTEM_PROMPT = f"""You are the friendly customer support assistant for Spark Auto Detailing
+# Your job is to:
+# 1. Answer customer questions about services, pricing, turnaround times, location, and policies using the lookup_business_info tool by passing the users query as an argument.
+# 2. Help customers book detailing appointments by collecting their information through natural conversation.
+# 3. Prioritize getting all the details through a single message and refrain from asking one detail per message.
+# 4. Once the appointment is created, notify the customer that the appointment has been createdd and pass in all the info including appoitment/booking id
+# 5. Always Greet with the welcome to Spark Auto Detailing and be transparent that you are an AI assistant and Request for human staff can be made anytime by the customer
 
-When a customer wants to book a repair appointment:
-- Ask for their name (if not provided)
-- Ask for their Vehicle Make and Model (e.g., "Porche 911", p.s it doesnt have to be the full model, only the company name works fine too)
-- Ask for the Service Required
-- Ask for the Appointment date and time
-- Before confirming a booking, check availability using the appointment lookup tool (i.e. get_booked_slots), Also check whether shop is open at that time using lookup_businesss_info tool. 
-- Dont book slots starting from 30 mins before closing time.
-- If the requested slot is unavailable, suggest the nearest available slot, but make sure that the slot you suggest is available.
-- If the customer provides multiple pieces of info at once in their message, extract them all immediately. Do not re-ask for details they already mentioned.
-- Only call create_detailing_appointment when you have ALL THREE pieces of info
-- The assistant must clearly state that appointments are only confirmed after approval by a staff member.
+# When a customer wants to book a repair appointment:
+# - Ask for their name (if not provided)
+# - Ask for their Vehicle Make and Model (e.g., "Porche 911", p.s it doesnt have to be the full model, only the company name works fine too)
+# - Ask for the Service Required
+# - Ask for the Appointment date and time
+# - Before confirming a booking, check availability using the appointment lookup tool (i.e. get_booked_slots), Also check whether shop is open at that time using lookup_businesss_info tool. 
+# - Dont book slots starting from 30 mins before closing time.
+# - If the requested slot is unavailable, suggest the nearest available slot, but make sure that the slot you suggest is available.
+# - If the customer provides multiple pieces of info at once in their message, extract them all immediately. Do not re-ask for details they already mentioned.
+# - Only call create_appointment when you have ALL THREE pieces of info
+# - The assistant must clearly state that appointments are only confirmed after approval by a staff member.
 
-IMPORTANT INFO FOR BOOKING CONFLICT DETECTION AND USING get_booked_slots:
--Today's date {today}.
--When the user refers to relative dates such as today, tomorrow, this Friday, or next Tuesday, interpret them relative to today's date and convert them to ISO format (YYYY-MM-DD) before using any tools.
+# CRITICAL RULES FOR TOOL CALLING:
+# 1. If the customer provides multiple pieces of information in a single sentence, extract ALL of them immediately.
+# 2. Do not re-ask or double-check information that was already clearly stated in their message history.
+# 3. As long as you have something written for all required fields (even if partial), trigger 'create_appointment' immediately. Do not stall.
 
-CRITICAL RULES FOR TOOL CALLING:
-1. If the customer provides multiple pieces of information in a single sentence, extract ALL of them immediately.
-2. Do not re-ask or double-check information that was already clearly stated in their message history.
-3. As long as you have something written for all required fields (even if partial), trigger 'create_detailing_appointment' immediately. Do not stall.
-
-Keep responses concise and friendly. Use emojis sparingly. Always be helpful."""
+# Keep responses concise and friendly. Use emojis sparingly. Always be helpful."""
 
 
 #this part is the new langgraph bot, everything above stays the same
@@ -291,8 +293,14 @@ class AgentState(TypedDict):
     messages: Annotated[List, add_messages]
 
 
-tools_list = [lookup_businesss_info, get_booked_slots, create_detailing_appointment, initiate_human_handoff]
+tools_list = [lookup_businesss_info, get_booked_slots, create_appointment, initiate_human_handoff]
 tools_node = ToolNode(tools_list)
+TOOLS_MAP = {
+    "lookup_businesss_info": lookup_businesss_info,
+    "get_booked_slots": get_booked_slots,
+    "create_appointment": create_appointment,
+    "initiate_human_handoff": initiate_human_handoff
+}
 
 def tools_condition(state: AgentState):
     print("this is tools condition")
@@ -359,19 +367,40 @@ def route_query(state: AgentState, config: RunnableConfig):
         return "error executing human handoff request: error"
 
 
-prompt = ChatPromptTemplate.from_messages([
-        ("system", SYSTEM_PROMPT), 
-        MessagesPlaceholder(variable_name="messages", optional=True)
-    ])
-
-llm = ChatOpenAI(model="gpt-4o-mini").bind_tools(tools_list)
 
 
-def call_agent(state: AgentState):
+#not binding tools here, will be binded dynamically
+llm = ChatOpenAI(model="gpt-4o-mini")
+
+
+def call_agent(state: AgentState, config: RunnableConfig):
     """Decide response using tools and context"""
     print("this is agent_node")
     messages = state["messages"]
-    chain = prompt | llm
+    configurable = config.get("configurable", {})
+
+    system_prompt = configurable.get("system_prompt")
+    today = datetime.now().strftime("%A, %B %d, %Y")
+    allowed_tools = configurable.get("tools_allowed") 
+
+    if "get_booked_slots" in allowed_tools or "create_appointment" in allowed_tools:
+        critical_instruction = f"""IMPORTANT INFO FOR BOOKING CONFLICT DETECTION AND USING get_booked_slots:
+            -Today's date {today}.
+            -When the user refers to relative dates such as today, tomorrow, this Friday, or next Tuesday, interpret them relative to today's date and convert them to ISO format (YYYY-MM-DD) before using any tools."""
+    else:
+        critical_instruction = ""
+
+
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", system_prompt + critical_instruction), 
+        MessagesPlaceholder(variable_name="messages", optional=True)
+    ])
+    
+    shop_tools = [TOOLS_MAP[tool] for tool in allowed_tools if tool in TOOLS_MAP]
+
+    dynamic_llm = llm.bind_tools(shop_tools) if shop_tools else llm
+    chain = prompt | dynamic_llm
+    
     response = chain.invoke({"messages": messages})
     print(response)
     return {"messages": [response]}
@@ -390,13 +419,7 @@ workflow.add_edge("tool_node", "agent_node")
 REDIS_URL = os.getenv("REDIS_URL")
 
 
-def get_bot_response(compiled_agent: CompiledStateGraph, user_message: str, user_phone: str) -> str:
-    runtimeConfig = {
-        "configurable": {
-            "thread_id": user_phone,
-            "phone_number": user_phone
-        }
-    }
+def get_bot_response(compiled_agent: CompiledStateGraph, user_message: str, runtimeConfig) -> str:
 
     payload = {"messages": [HumanMessage(content=user_message)]}
     try:

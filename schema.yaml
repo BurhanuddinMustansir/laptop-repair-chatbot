@@ -9,6 +9,9 @@ fields:
   - name: id 
     type: tag
 
+  - name: shop_id
+    type: tag
+
   - name: text
     type: text
 
