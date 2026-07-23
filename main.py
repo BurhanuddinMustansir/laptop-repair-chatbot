@@ -235,7 +235,7 @@ def web_chat(request: Request, req: ChatRequest):
         conn.close()
     system_prompt = shop_data["system_instructions"]
     print(system_prompt)
-    tools_allowed = [tool.strip() for tool in shop_data.tools.split(",") if tool.strip()]
+    tools_allowed = [tool.strip() for tool in shop_data["tools"].split(",") if tool.strip()]
     thread_id = f"{shop_id}:{req.session_id}"
     runtimeConfig = {
         "configurable": {
