@@ -200,6 +200,8 @@ def get_booked_slots(date):
 @tool 
 def create_appointment(customer_name: str, vehicle_make_model: str, service_required: str, appointment_date: str, appointment_time: str, config: RunnableConfig) -> str:
     """Create a new repair appoitment. Use this tool ONLY when you have collected ALL FIVE pieces of information from 
+    their name (if not provided), Service Required,  the Appointment date,  and appointment time
+    Pass the appointment date and time as the argument in ISO format (YYYY-MM-DD).
     the customer: the required information is mentioned in the system prompt Do NOT ask for their contact phone number, as it is handled automatically.
     
     Returns:
