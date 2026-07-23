@@ -29,7 +29,7 @@ REDIS_URL = os.getenv("REDIS_URL")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    with AsyncShallowRedisSaver.from_conn_string(
+    async with AsyncShallowRedisSaver.from_conn_string(
         REDIS_URL, 
         ttl={"default_ttl": 60, "refresh_on_read": True}
         ) as checkpointer:
