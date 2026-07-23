@@ -135,7 +135,7 @@ def lookup_businesss_info(query: str, config: RunnableConfig) -> str:
     configurable = config.get("configurable", {})
     shop_id = configurable.get("shop_id")
 
-    filter = Tag("shop_id") == shop_id
+    filter = Tag("shop_id") == str(shop_id)
 
     query_embedding = create_embeddings(query)
     query = VectorQuery(
