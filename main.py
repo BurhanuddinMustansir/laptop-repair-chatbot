@@ -26,6 +26,7 @@ WHATSAPP_PHONE_NUMBER_ID = os.getenv("WHATSAPP_PHONE_NUMBER_ID")
 VERIFY_TOKEN = os.getenv("VERIFY_TOKEN")
 
 REDIS_URL = os.getenv("REDIS_URL")
+DATABASE_URL = os.getenv("DATABASE_URL")
 
 #async context manager for creating teh redis checkpointer once per launch
 @asynccontextmanager
@@ -89,6 +90,9 @@ async def receive_webhook(request: Request):
         changes = entry.get("changes", [])
         for change in changes:
             value = change.get("value", {})
+            metadata = value.get("metadata", {})
+            whatsapp_business_number = metadata.get("whatsapp_business_number")
+            print(whatsapp_business_number)
             messages = value.get("messages", [])
             for message in messages:
                 if message.get("type") == "text":
@@ -111,9 +115,30 @@ async def receive_webhook(request: Request):
                     
                     #setting expiry at one hour
                     # redis_client.expire(session_id, 3600)
+                    conn, cursor = get_db_cursor(DATABASE_URL)
                     try:
+                        cursor.execute("SELECT * FROM shops WHERE whatsapp_phone_number = %s;", (whatsapp_business_number,))
+                        shop_data = cursor.fetchone()
+                    finally:
+                        conn.close()
+                        cursor.close()
+                    thread_id = sender
+                    shop_id = shop_data["id"]
+                    system_prompt = shop_data["system_instructions"]
+                    tools_allowed = [tool.strip() for tool in shop_data["tools"].split(",") if tool.strip()]
+                    try:
+                        runtimeConfig = {
+                                "configurable": {
+                                    "thread_id": thread_id,
+                                    "shop_id": shop_id,
+                                    "phone_number": sender,
+                                    "system_prompt": system_prompt,
+                                    "tools_allowed": tools_allowed
+                        
+                                }
+                            }
                         active_agent = request.app.state.compiled_agent
-                        reply = agent_langgraph.get_bot_response(active_agent, text, sender)
+                        reply = agent_langgraph.get_bot_response(active_agent, text, runtimeConfig)
                         print(f"Bot response generated: {reply}")
                         await send_whatsapp_message(sender, reply)
                         # message = {
@@ -186,7 +211,7 @@ async def load_form(request: Request, response_class=HTMLResponse):
     return templates.TemplateResponse(request=request, name="shop.html")
 
 
-DATABASE_URL = os.getenv("DATABASE_URL")
+
 
 
 
@@ -238,17 +263,18 @@ def web_chat(request: Request, req: ChatRequest):
     tools_allowed = [tool.strip() for tool in shop_data["tools"].split(",") if tool.strip()]
     thread_id = f"{shop_id}:{req.session_id}"
     runtimeConfig = {
-        "configurable": {
-            "thread_id": thread_id,
-            "shop_id": shop_id,
-            "phone_number": "web",
-            "system_prompt": system_prompt,
-            "tools_allowed": tools_allowed
-
+            "configurable": {
+                "thread_id": thread_id,
+                "shop_id": shop_id,
+                "phone_number": "web",
+                "system_prompt": system_prompt,
+                "tools_allowed": tools_allowed
+    
+            }
         }
-    }
     active_agent = request.app.state.compiled_agent
     reply = agent_langgraph.get_bot_response(active_agent, req.message, runtimeConfig)
+    
     return ChatResponse(reply=reply)
 
 
